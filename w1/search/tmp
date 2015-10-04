@@ -1,0 +1,15 @@
+> sayIt('hi')('there')()
+"hi there"
+> sayIt('hi')
+> sayIt('there')()
+"hi there"
+>
+
+vs.
+
+> closureSayIt('hi')('there')()
+"hi there"
+> closureSayIt('hi')
+> closureSayIt('there')()
+"there"
+>

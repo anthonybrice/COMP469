@@ -2,6 +2,15 @@
 __pycache__/
 *.py[cod]
 
+# Textbooks
+*.pdf
+
+# Pacman junk
+*.solution
+*.test
+*.lay
+CONFIG
+
 # C extensions
 *.so
 
