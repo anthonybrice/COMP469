@@ -9,87 +9,9 @@ import networkx
 import math
 import sys
 
-def scatter(n):
-    """Returns a graph with n nodes of random location on the unit square."""
-    G = networkx.Graph()
-    while len(G.nodes()) < n:
-        G.add_node((random(), random()))
-
-    return G
-
-def connect(G):
-    """Returns G after executing the following procedure: 1. Select a node X at
-    random. 2. Connect X by a straight line to the nearest neighbor Y such that
-    X is not already connected to Y and the line crosses no other line.
-    3. Repeat 1 and 2 until no more connections are possible.
-
-    """
-    nodes = G.nodes()
-    while True:
-        X = choice(nodes)
-        Y = nearestValidNeighbor(G, X)
-        if Y is not None:
-            G.add_edge(X, Y)
-
-        # Check to ensure there are still valid edges to make.
-        if all(nearestValidNeighbor(G, node) is None for node in nodes):
-            break
-
-    return G
-
-def nearestValidNeighbor(G, X):
-    """Returns the nearest neighbor to X such that a straight edge from X to the
-    neighbor would cross no other edge. Returns None if no neighbors satisfy the
-    condition.
-
-    """
-    # Get a list of the nodes sorted by their distance from X
-    nodes = G.nodes()
-    edges = G.edges()
-    ed = euclideanDistance
-    nodes.sort(cmp = lambda p,q: cmp(ed(p, X), ed(q, X)))
-
-    for node in nodes[1:]:
-        # Ensure an edge between X and node does not already exist.
-        if (X, node) in edges or (node, X) in edges:
-            continue
-
-        # Check if an edge between X and node would cross any other edge.
-        possibleEdge = (X, node)
-        if all(not isIntersecting(edge, possibleEdge)
-               for edge in edges):
-            return node
-
-    # If we made it here, then no valid edge could be made to a neighbor.
-    return None
-
-def euclideanDistance(p, q):
-    """Returns the Euclidean distance between te given tuples."""
-    return math.sqrt((p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2)
-
-def isIntersecting(ef, pq):
-    """Returns True if an intersection exists between line segments ef and pq."""
-    # credit: http://jsfiddle.net/ytr9314a/4/
-    a = list(ef)[0]
-    b = list(ef)[1]
-    c = list(pq)[0]
-    d = list(pq)[1]
-    aSide = crossProduct(c, d, a) > 0
-    bSide = crossProduct(c, d, b) > 0
-    cSide = crossProduct(a, b, c) > 0
-    dSide = crossProduct(a, b, d) > 0
-
-    return aSide != bSide and cSide != dSide
-
-def crossProduct(e, f, p):
-    return (f[0] - e[0]) * (p[1] - e[1]) - (f[1] - e[1]) * (p[0] - e[0])
-
-def mapProblem(n):
-    """Returns a random map-coloring problem represented as a dual graph of n
-    vertices.
-
-    """
-    return connect(scatter(n))
+####################
+# SEARCH FUNCTIONS #
+####################
 
 def minConflicts(G, k):
     """Returns a solution using the min-conflicts algorithm to the given dual graph
@@ -250,36 +172,6 @@ def isComplete(assignment):
     """Returns True if every key in assignment has a value."""
     return all(v is not None for v in assignment.values())
 
-def getCsp(G, k):
-    """Returns a constraint-satisfaction problem of the given dual graph with domain
-    range(k) and the constraint that no vertex can share the value of an
-    adjacent vertex.
-
-    """
-    csp = dict()
-    csp["vars"] = G.nodes()
-    csp["domains"] = range(k)
-    csp["neighbors"] = getCspNeighbors(G)
-    csp["constraints"] = lambda A,a,B,b: a != b
-
-    return csp
-
-def getCspNeighbors(G):
-    """Returns a dictionary in which the keys are the vertices of G and the values
-    are the neighbors of that key.
-
-    """
-    d = dict()
-    for node in G.nodes():
-        l = list()
-        for edge in G.edges():
-            if node == edge[0]:
-                l.append(edge[1])
-            elif node == edge[1]:
-                l.append(edge[0])
-        d[node] = l
-
-    return d
 
 def _minConflicts(csp, maxSteps=1000000):
     """Returns a solution to the given csp using the min-conflicts algorithm."""
@@ -349,6 +241,127 @@ def conflictingVariables(csp, current):
         # if conflicted:
         #     conflicts.append(var)
     return conflicts
+
+#################
+# CSP GENERATOR #
+#################
+
+def getCsp(G, k):
+    """Returns a constraint-satisfaction problem of the given dual graph with domain
+    range(k) and the constraint that no vertex can share the value of an
+    adjacent vertex.
+
+    """
+    csp = dict()
+    csp["vars"] = G.nodes()
+    csp["domains"] = range(k)
+    csp["neighbors"] = getCspNeighbors(G)
+    csp["constraints"] = lambda A,a,B,b: a != b
+
+    return csp
+
+def getCspNeighbors(G):
+    """Returns a dictionary in which the keys are the vertices of G and the values
+    are the neighbors of that key.
+
+    """
+    d = dict()
+    for node in G.nodes():
+        l = list()
+        for edge in G.edges():
+            if node == edge[0]:
+                l.append(edge[1])
+            elif node == edge[1]:
+                l.append(edge[0])
+        d[node] = l
+
+    return d
+
+###################
+# GRAPH GENERATOR #
+###################
+
+def scatter(n):
+    """Returns a graph with n nodes of random location on the unit square."""
+    G = networkx.Graph()
+    while len(G.nodes()) < n:
+        G.add_node((random(), random()))
+
+    return G
+
+def connect(G):
+    """Returns G after executing the following procedure: 1. Select a node X at
+    random. 2. Connect X by a straight line to the nearest neighbor Y such that
+    X is not already connected to Y and the line crosses no other line.
+    3. Repeat 1 and 2 until no more connections are possible.
+
+    """
+    nodes = G.nodes()
+    while True:
+        X = choice(nodes)
+        Y = nearestValidNeighbor(G, X)
+        if Y is not None:
+            G.add_edge(X, Y)
+
+        # Check to ensure there are still valid edges to make.
+        if all(nearestValidNeighbor(G, node) is None for node in nodes):
+            break
+
+    return G
+
+def nearestValidNeighbor(G, X):
+    """Returns the nearest neighbor to X such that a straight edge from X to the
+    neighbor would cross no other edge. Returns None if no neighbors satisfy the
+    condition.
+
+    """
+    # Get a list of the nodes sorted by their distance from X
+    nodes = G.nodes()
+    edges = G.edges()
+    ed = euclideanDistance
+    nodes.sort(cmp = lambda p,q: cmp(ed(p, X), ed(q, X)))
+
+    for node in nodes[1:]:
+        # Ensure an edge between X and node does not already exist.
+        if (X, node) in edges or (node, X) in edges:
+            continue
+
+        # Check if an edge between X and node would cross any other edge.
+        possibleEdge = (X, node)
+        if all(not isIntersecting(edge, possibleEdge)
+               for edge in edges):
+            return node
+
+    # If we made it here, then no valid edge could be made to a neighbor.
+    return None
+
+def euclideanDistance(p, q):
+    """Returns the Euclidean distance between te given tuples."""
+    return math.sqrt((p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2)
+
+def isIntersecting(ef, pq):
+    """Returns True if an intersection exists between line segments ef and pq."""
+    # credit: http://jsfiddle.net/ytr9314a/4/
+    a = list(ef)[0]
+    b = list(ef)[1]
+    c = list(pq)[0]
+    d = list(pq)[1]
+    aSide = crossProduct(c, d, a) > 0
+    bSide = crossProduct(c, d, b) > 0
+    cSide = crossProduct(a, b, c) > 0
+    dSide = crossProduct(a, b, d) > 0
+
+    return aSide != bSide and cSide != dSide
+
+def crossProduct(e, f, p):
+    return (f[0] - e[0]) * (p[1] - e[1]) - (f[1] - e[1]) * (p[0] - e[0])
+
+def mapProblem(n):
+    """Returns a random map-coloring problem represented as a dual graph of n
+    vertices.
+
+    """
+    return connect(scatter(n))
 
 # Local Variables:
 # flycheck-python-pycompile-executable: "/usr/bin/python2"
