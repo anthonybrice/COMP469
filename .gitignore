@@ -9,7 +9,7 @@ __pycache__/
 *.solution
 *.test
 *.lay
-CONFIG
+test_cases/
 
 # C extensions
 *.so
