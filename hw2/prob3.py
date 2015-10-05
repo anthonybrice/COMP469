@@ -1,5 +1,5 @@
 # File: prob3.py
-# Desc: A solution Problem 6.10 in AIMA
+# Desc: A solution to Problem 6.10 in AIMA
 # Author: Anthony Brice
 
 from random import random, choice
@@ -53,7 +53,7 @@ def backtrack(assignment, csp, inference):
     if isComplete(assignment["assignment"]):
         return assignment
 
-    var = selectUnassignedVariable(assignment["assignment"], csp)
+    var = selectUnassignedVariable(assignment, csp)
     for value in orderDomainValues(var, assignment, csp):
         oldInferences = deepcopy(assignment["inferences"])
         if isConsistent(var, value, assignment["assignment"], csp):
@@ -160,13 +160,27 @@ def isConsistent(var, value, assignment, csp):
 
 def selectUnassignedVariable(assignment, csp):
     """Returns the next unassigned variable in assignment."""
-    for k, v in assignment.items():
-        if v is None:
-            return k
+    # Return the variable with the minimum-remaining values. Note that this only
+    # takes effect if constraints are propagated by an inference procedure.
+    l = [x[0] for x in assignment["assignment"].items() if x[1] is None]
+    return min(l, key=lambda x: len(assignment["inferences"][x]))
 
 def orderDomainValues(var, assignment, csp):
     """Returns an ordering of the domain values."""
-    return assignment["inferences"][var]
+    # Return the values in order of least constraining. For each value, we count
+    # the number of values it rules out for all var's neighbors.
+    l = list()
+    for value in assignment["inferences"][var]:
+        num = 0
+        for neighbor in csp["neighbors"][var]:
+            for val2 in assignment["inferences"][neighbor]:
+                if not csp["constraints"](var, value, neighbor, val2):
+                    num += 1
+        l.append((value, num))
+
+    l.sort(key=lambda x: x[1])
+
+    return map(lambda x: x[0], l)
 
 def isComplete(assignment):
     """Returns True if every key in assignment has a value."""
