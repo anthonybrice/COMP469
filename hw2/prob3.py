@@ -54,13 +54,18 @@ def backtrack(assignment, csp, inference):
         return assignment
 
     var = selectUnassignedVariable(assignment["assignment"], csp)
+    print "var is", var
+    for neighbor in csp["neighbors"][var]:
+        print "neighbor", neighbor, "is assigned", assignment["assignment"][neighbor]
     for value in orderDomainValues(var, assignment, csp):
+        print "value is", value
+        print "possible options were", assignment["inferences"][var]
         oldInferences = deepcopy(assignment["inferences"])
         if isConsistent(var, value, assignment["assignment"], csp):
             assignment["assignment"][var] = value
             assignment["inferences"][var] = [value]
 
-            inferences = oldInferences
+            inferences = assignment["inferences"]
             if inference is not None:
                 inferences = inference(csp, var, value, assignment)
 
@@ -68,13 +73,13 @@ def backtrack(assignment, csp, inference):
                 assignment["inferences"] = inferences
 
                 result = backtrack(assignment, csp, inference)
-                if isSuccess(result["assignment"], csp):
+                if result is not None:
                     return result
 
         assignment["assignment"][var] = None
         assignment["inferences"] = oldInferences
 
-    raise RuntimeError("How did we get here?")
+    return None
 
 def isSuccessfulInferences(inferences):
     """Returns True if inferences contains no inconsistency."""
