@@ -54,12 +54,7 @@ def backtrack(assignment, csp, inference):
         return assignment
 
     var = selectUnassignedVariable(assignment["assignment"], csp)
-    print "var is", var
-    for neighbor in csp["neighbors"][var]:
-        print "neighbor", neighbor, "is assigned", assignment["assignment"][neighbor]
     for value in orderDomainValues(var, assignment, csp):
-        print "value is", value
-        print "possible options were", assignment["inferences"][var]
         oldInferences = deepcopy(assignment["inferences"])
         if isConsistent(var, value, assignment["assignment"], csp):
             assignment["assignment"][var] = value
@@ -236,20 +231,15 @@ def conflictingVariables(csp, current):
         if any(not csp["constraints"](var, val, neighbor, current[neighbor])
                for neighbor in csp["neighbors"][var]):
             conflicts.append(var)
-        # conflicted = False
-        # for neighbor in csp.get("neighbors").get(var):
-        #     val2 = current.get(neighbor)
-        #     if not csp.get("constraints")(var, val, neighbor, val2):
-        #         conflicted = True
-        #         break
 
-        # if conflicted:
-        #     conflicts.append(var)
     return conflicts
 
 #################
 # CSP GENERATOR #
 #################
+
+# Definition takes inspiration from here: http://aima.cs.berkeley.edu/python/csp.html
+# The implementation is my own.
 
 def getCsp(G, k):
     """Returns a constraint-satisfaction problem of the given dual graph with domain
