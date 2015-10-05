@@ -8,6 +8,34 @@ from collections import deque
 import networkx
 import math
 import sys
+from timeit import Timer
+import csv
+
+########
+# MAIN #
+########
+
+def main(args):
+    l = [mapProblem((x+1)*10) for x in range(10)]
+    print "Finished generating graphs"
+
+    min4 = [Timer(lambda: minConflicts(G, 4)).timeit(number=1) for G in l]
+    print "Finished timing minConflicts"
+    back4 = [Timer(lambda: backtrackingSearch(G, 4)).timeit(number=1)
+             for G in l]
+    print "Finished timing backtracking"
+    fc4 = [Timer(lambda: backtrackingSearch(G, 4, inference=forwardChecking))
+           .timeit(number=1) for G in l]
+    print "Finished timing forward checking"
+    mac4 = [Timer(lambda: backtrackingSearch(G, 4, inference=maintainingArcConsistency))
+            .timeit(number=1) for G in l]
+    print "Finished timing MAC"
+
+    out = csv.writer(open("data.csv", "w"), delimiter=",")
+    out.writerow(min4)
+    out.writerow(back4)
+    out.writerow(fc4)
+    out.writerow(mac4)
 
 ####################
 # SEARCH FUNCTIONS #
@@ -39,11 +67,11 @@ def _backtrackingSearch(csp, inference):
     assignment = dict()
     assignment["assignment"] = dict()
     assignment["inferences"] = dict()
-    for var in csp.get("vars"):
+    for var in csp["vars"]:
         assignment["assignment"][var] = None
-        assignment["inferences"][var] = list(csp.get("domains"))
+        assignment["inferences"][var] = list(csp["domains"])
 
-    return backtrack(assignment, csp, inference)
+    return backtrack(assignment, csp, inference)["assignment"]
 
 def backtrack(assignment, csp, inference):
     """Returns a solution to given csp using the backtracking algorithm starting at
@@ -54,6 +82,7 @@ def backtrack(assignment, csp, inference):
         return assignment
 
     var = selectUnassignedVariable(assignment, csp)
+    print "var is:", csp["vars"].index(var)
     for value in orderDomainValues(var, assignment, csp):
         oldInferences = deepcopy(assignment["inferences"])
         if isConsistent(var, value, assignment["assignment"], csp):
@@ -162,25 +191,29 @@ def selectUnassignedVariable(assignment, csp):
     """Returns the next unassigned variable in assignment."""
     # Return the variable with the minimum-remaining values. Note that this only
     # takes effect if constraints are propagated by an inference procedure.
-    l = [x[0] for x in assignment["assignment"].items() if x[1] is None]
-    return min(l, key=lambda x: len(assignment["inferences"][x]))
+    # l = [x for x in csp["vars"] if assignment["assignment"][x] is None]
+    # return min(l, key=lambda x: len(assignment["inferences"][x]))
+    for var in csp["vars"]:
+        if assignment["assignment"][var] is None:
+            return var
 
 def orderDomainValues(var, assignment, csp):
     """Returns an ordering of the domain values."""
     # Return the values in order of least constraining. For each value, we count
     # the number of values it rules out for all var's neighbors.
-    l = list()
-    for value in assignment["inferences"][var]:
-        num = 0
-        for neighbor in csp["neighbors"][var]:
-            for val2 in assignment["inferences"][neighbor]:
-                if not csp["constraints"](var, value, neighbor, val2):
-                    num += 1
-        l.append((value, num))
+    # l = list()
+    # for value in assignment["inferences"][var]:
+    #     num = 0
+    #     for neighbor in csp["neighbors"][var]:
+    #         for val2 in assignment["inferences"][neighbor]:
+    #             if not csp["constraints"](var, value, neighbor, val2):
+    #                 num += 1
+    #     l.append((value, num))
 
-    l.sort(key=lambda x: x[1])
+    # l.sort(key=lambda x: x[1])
 
-    return map(lambda x: x[0], l)
+    # return map(lambda x: x[0], l)
+    return csp["domains"]
 
 def isComplete(assignment):
     """Returns True if every key in assignment has a value."""
@@ -306,17 +339,21 @@ def connect(G):
 
     """
     nodes = G.nodes()
-    while True:
+    while nodes:
         X = choice(nodes)
         Y = nearestValidNeighbor(G, X)
         if Y is not None:
             G.add_edge(X, Y)
 
-        # Check to ensure there are still valid edges to make.
-        if all(nearestValidNeighbor(G, node) is None for node in nodes):
-            break
+        nodes = criticalNodes(G, nodes)
 
     return G
+
+def criticalNodes(G, nodes):
+    """Returns the nodes of G for which possible edges still exist.
+
+    """
+    return [node for node in nodes if nearestValidNeighbor(G, node) is not None]
 
 def nearestValidNeighbor(G, X):
     """Returns the nearest neighbor to X such that a straight edge from X to the
@@ -327,8 +364,7 @@ def nearestValidNeighbor(G, X):
     # Get a list of the nodes sorted by their distance from X
     nodes = G.nodes()
     edges = G.edges()
-    ed = euclideanDistance
-    nodes.sort(cmp = lambda p,q: cmp(ed(p, X), ed(q, X)))
+    nodes.sort(key=lambda x: euclideanDistance(x, X))
 
     for node in nodes[1:]:
         # Ensure an edge between X and node does not already exist.
@@ -371,6 +407,9 @@ def mapProblem(n):
 
     """
     return connect(scatter(n))
+
+if __name__ == "__main__":
+    main(sys.argv)
 
 # Local Variables:
 # flycheck-python-pycompile-executable: "/usr/bin/python2"
