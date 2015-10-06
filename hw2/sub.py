@@ -1,41 +1,204 @@
-# File: prob3.py
-# Desc: A solution to Problem 6.10 in AIMA
+# File: sub.py
+# Desc: My submission for CS469 HW 4
 # Author: Anthony Brice
 
+import re
+import itertools
+import sys
 from random import random, choice
 from copy import deepcopy
 from collections import deque
 import networkx
 import math
-import sys
 from timeit import Timer
 import csv
+
+def main(argv):
+    if argv[1] != "p1" or argv[1] != "p2" or argv[1] != "p3":
+        print "usage:"
+        print argv[0], "p1 [cryptarithmetic boolean expression]"
+        print "OR"
+        print argv[0], "p2 [sudoku string]"
+        print "OR"
+        print argv[0], "p3"
+        print "You will need the python module networkx to run p3."
+        sys.exit(1)
+
+    if argv[1] == "p1":
+        p1(argv)
+    elif argv[1] == "p2":
+        p2(argv)
+    else: # argv[1] == "p3"
+        p3()
+
+#
+# PROBLEM 1
+#
+# Desc: A program that solves cryptarithmetic equalities such as "REASON == IT *
+#   IS + THERE". Note that this program makes use of `eval()` and as such should
+#   only be used in a safe environment.
+
+
+def _letters(s):
+    """Returns the case-sensitive set of letters in the given string."""
+    return set([x for x in s if x.isalnum()])
+
+pat = re.compile(r"\b0")
+def cryptarithmetic(equality):
+    """Returns a list of dictionaries defining all solutions to the given
+    cryptarithmetic Boolean expression."""
+
+    letters = _letters(equality)
+
+    # Permutations does simple backtracking over partial assignments.
+    perms = itertools.permutations(range(10), len(letters))
+
+    sols = list()
+    for perm in perms:
+        expr = equality
+
+        # Substitute the letters in expr with the numbers in perm.
+        for l, n in zip(letters, perm):
+            expr = expr.replace(l, str(n))
+
+        try:
+            # If there are no leading zeroes AND the expression evaluates to
+            # True, then we have a solution.
+            if pat.search(expr) == None and eval(expr):
+                sols.append(dict(zip(letters, perm)))
+        except ZeroDivisionError:
+            continue
+
+    return sols
+
+def p1(argv):
+    sols = cryptarithmetic(argv[1])
+    for sol in sols:
+        print sol
+
+#
+# PROBLEM 2
+#
+# Desc: A Sudoku solver. Input is an 81-character, numeric string with 0 for
+#   blanks. This solution relies heavily on Peter Norvig's solution found
+#   here: http://norvig.com/sudoku.html
+#   I've tried to add documentation and comments that explain how this solution
+#   makes use of CSP algorithms.
+
+def cross(a, b):
+    return [c + d for c in a for d in b]
+
+rows = "ABCDEFGHI"
+columns = "123456789"
+digits = columns
+squares = cross(rows, columns)
+unitList = ([cross(rows, c) for c in columns]
+            + [cross(r, columns) for r in rows]
+            + [cross(rs, cs) for rs in ("ABC", "DEF", "GHI")
+               for cs in ("123", "456", "789")])
+
+units = dict((s, [u for u in unitList if s in u]) for s in squares)
+
+peers = dict((s, set(sum(units[s],[])) - set([s])) for s in squares)
+
+def parseGrid(grid):
+    """Takes a Sudoku string and returns a dictionary representation of the grid.
+    Keys are Sudoku grid positions and values are either the fixed values given
+    in the string or a list of any possible value if the position is blank. No
+    constraints are checked yet.
+
+    """
+    return dict((s, digits) for s in squares)
+
+def gridValues(grid):
+    """Takes a Sudoku string and returns a dictionary representation."""
+    chars = [c for c in grid if c in digits or c in "0."]
+    return dict(zip(squares, chars))
+
+def assign(values, s, d):
+    """Returns values with all other values except d eliminated from values[s] and
+    with the constraint from the assignment propagated.
+
+    """
+    otherValues = values[s].replace(d, "")
+    for d2 in otherValues:
+        eliminate(values, s, d2)
+    return values
+
+def eliminate(values, s, d):
+    """Returns values with d eliminated from values[s] and with constraints
+    propagated.
+
+    """
+    if d not in values[s]:
+        return values
+    values[s] = values[s].replace(d,"")
+    if len(values[s]) == 1:
+        d2 = values[s]
+        for s2 in peers[s]:
+            eliminate(values, s2, d2)
+    for u in units[s]:
+        dplaces = [s for s in u if d in values[s]]
+        if len(dplaces) == 1:
+            assign(values, dplaces[0], d)
+    return values
+
+def display(values):
+    """Pretty prints a Sudoku puzzle."""
+    width = 1 + max(len(values[s]) for s in squares)
+    line = "+".join(["-" * (width * 3)] * 3)
+    for r in rows:
+        print "".join(values[r + c].center(width) + ("|" if c in "36" else "")
+                      for c in columns)
+        if r in "CF": print line
+    print
+
+def solve(grid):
+    """Solves a Sudoku puzzle."""
+    return search(parseGrid(grid))
+
+def search(values):
+    """Returns the solution for a given puzzle."""
+    if all(len(values[s]) == 1 for s in squares):
+        return values
+
+    # Chooses the square with the minimum-remaining values.
+    n, s = min((len(values[s]), s) for s in squares if len(values[s]) > 1)
+    return some(search(assign(values.copy(), s, d))
+                for d in values[s])
+
+def some(seq):
+    for e in seq:
+        return e
+
+def p2(argv):
+    sol = solve(argv[1])
+    display(sol)
+
+#
+# PROBLEM 3
+#
 
 ########
 # MAIN #
 ########
 
-def main(args):
+def p3():
     l = [mapProblem((x+1)*10) for x in range(10)]
-    print "Finished generating graphs"
 
     min4 = [Timer(lambda: minConflicts(G, 4)).timeit(number=1) for G in l]
-    print "Finished timing minConflicts"
     back4 = [Timer(lambda: backtrackingSearch(G, 4)).timeit(number=1)
              for G in l[:5]]
-    print "Finished timing backtracking"
     fc4 = [Timer(lambda: backtrackingSearch(G, 4, inference=forwardChecking))
            .timeit(number=1) for G in l]
-    print "Finished timing forward checking"
-    mac4 = [Timer(lambda: backtrackingSearch(G, 4, inference=maintainingArcConsistency))
+    mac = maintainingArcConsistency
+    mac4 = [Timer(lambda: backtrackingSearch(G, 4, inference=mac))
             .timeit(number=1) for G in l]
-    print "Finished timing MAC"
 
-    out = csv.writer(open("data.csv", "w"), delimiter=",")
-    out.writerow(min4)
-    out.writerow(back4)
-    out.writerow(fc4)
-    out.writerow(mac4)
+    print min4
+    print back4
+    print fc4
+    print mac4
 
 ####################
 # SEARCH FUNCTIONS #
@@ -402,9 +565,6 @@ def mapProblem(n):
 
     """
     return connect(scatter(n))
-
-if __name__ == "__main__":
-    main(sys.argv)
 
 # Local Variables:
 # flycheck-python-pycompile-executable: "/usr/bin/python2"
