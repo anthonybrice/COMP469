@@ -14,7 +14,7 @@ from timeit import Timer
 import csv
 
 def main(argv):
-    if argv[1] != "p1" or argv[1] != "p2" or argv[1] != "p3":
+    if argv[1] != "p1" and argv[1] != "p2" and argv[1] != "p3":
         print "usage:"
         print argv[0], "p1 [cryptarithmetic boolean expression]"
         print "OR"
@@ -25,9 +25,9 @@ def main(argv):
         sys.exit(1)
 
     if argv[1] == "p1":
-        p1(argv)
+        p1(argv[1:])
     elif argv[1] == "p2":
-        p2(argv)
+        p2(argv[1:])
     else: # argv[1] == "p3"
         p3()
 
@@ -565,6 +565,9 @@ def mapProblem(n):
 
     """
     return connect(scatter(n))
+
+if __name__ == "__main__":
+    main(sys.argv)
 
 # Local Variables:
 # flycheck-python-pycompile-executable: "/usr/bin/python2"

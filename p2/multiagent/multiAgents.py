@@ -243,7 +243,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                 move = act
 
             # The pseudo-code in video 12.6 explicitly states this test should
-            # be >=, but to pass 8-pacman-game.test, it must be >
+            # be >=. However to pass 8-pacman-game.test, it must be >.
             if v > beta:
                 return v, move
 
@@ -263,7 +263,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                 move = act
 
             # The pseudo-code in video 12.6 explicitly states this test should
-            # be <=, but to pass 6-tied-root.test, it must be <
+            # be <=. However to pass 6-tied-root.test, it must be <.
             if v < alpha:
                 return v, move
 
